@@ -67,6 +67,14 @@ object OneSignalManager {
     private var permissionObserver: IPermissionObserver? = null
     private var userStateObserver: IUserStateObserver? = null
 
+    /**
+     * Initialize synchronously from Application.onCreate().
+     *
+     * This is intentionally not dispatched to a coroutine. When FCM cold-starts the app process
+     * for a notification, OneSignal must be initialized before the notification service begins
+     * processing the payload. Asynchronous initialization can create a race where the notification
+     * is only restored after the user opens the app.
+     */
     fun initialize(context: Context) {
         if (!initializationStarted.compareAndSet(false, true)) return
 
@@ -76,29 +84,25 @@ object OneSignalManager {
                 .getBoolean(DIALOG_SHOWN_KEY, false),
         )
         initializing = true
-        dispatchState()
 
-        ioScope.launch {
-            try {
-                setVerboseLogging(true)
-                val success = OneSignal.initWithContextSuspend(
-                    context.applicationContext,
-                    BuildConfig.ONESIGNAL_APP_ID,
-                )
-                check(success) { "OneSignal SDK initialization returned false" }
+        try {
+            setVerboseLogging(true)
+            OneSignal.initWithContext(
+                context.applicationContext,
+                BuildConfig.ONESIGNAL_APP_ID,
+            )
 
-                registerObservers()
-                initialized = true
-                initializationError = null
+            registerObservers()
+            initialized = true
+            initializationError = null
 
-                // Evaluate immediately in case registration completed before the observer attached.
-                maybeShowIntegrationCompleteDialog(OneSignal.User.pushSubscription.id)
-            } catch (throwable: Throwable) {
-                initializationError = throwable.message ?: throwable.javaClass.simpleName
-            } finally {
-                initializing = false
-                dispatchState()
-            }
+            // Evaluate immediately in case registration completed before the observer attached.
+            maybeShowIntegrationCompleteDialog(OneSignal.User.pushSubscription.id)
+        } catch (throwable: Throwable) {
+            initializationError = throwable.message ?: throwable.javaClass.simpleName
+        } finally {
+            initializing = false
+            dispatchState()
         }
     }
 
@@ -137,13 +141,11 @@ object OneSignalManager {
 
     fun attachActivity(activity: Activity) {
         activityReference = WeakReference(activity)
-        ioScope.launch {
-            if (initialized) {
-                // Evaluate immediately again because the ID may already exist before UI attachment.
-                maybeShowIntegrationCompleteDialog(OneSignal.User.pushSubscription.id)
-            }
-            dispatchState()
+        if (initialized) {
+            // Evaluate immediately again because the ID may already exist before UI attachment.
+            maybeShowIntegrationCompleteDialog(OneSignal.User.pushSubscription.id)
         }
+        dispatchState()
     }
 
     fun detachActivity(activity: Activity) {
