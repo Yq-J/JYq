@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.yqj.onesignaltester'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.yqj.onesignaltester'
+        minSdk 21
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+
+        buildConfigField 'String', 'ONESIGNAL_APP_ID', '"36e39826-e283-4bb5-82e4-c73cfa46c71f"'
+        buildConfigField 'String', 'FIREBASE_PROJECT_ID', '"apppush-374db"'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.onesignal:OneSignal:5.9.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+}
